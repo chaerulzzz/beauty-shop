@@ -1,38 +1,49 @@
-package api
+package delivery
 
 import (
-	"beauty-shop/dto"
-	"beauty-shop/helper/mapper"
+	"beauty-shop/auth"
 	"beauty-shop/models"
-	"beauty-shop/service"
+	"beauty-shop/usecase"
 	"github.com/gin-gonic/gin"
 	"net/http"
 	"strconv"
 )
 
-type BookApi struct {
-	BookService service.BookService
+type BookHandler struct {
+	BookService usecase.BookUsecase
 }
 
-func ProviderBookApi(p service.BookService) BookApi {
-	return BookApi{BookService: p}
+func ProviderBookHandler(p usecase.BookUsecase) BookHandler {
+	return BookHandler{BookService: p}
 }
 
-func (p *BookApi) FindAll(c *gin.Context) {
+func (p *BookHandler) FindAll(c *gin.Context) {
+	tokenAuth, err := auth.ExtractTokenMetadata(c.Request)
+	if err != nil {
+		c.JSON(http.StatusUnauthorized, "unauthorized")
+		return
+	}
+
+	_, err = auth.FetchAuth(tokenAuth, p.BookService.GetRedisClient())
+	if err != nil {
+		c.JSON(http.StatusUnauthorized, "unauthorized")
+		return
+	}
+
 	books := p.BookService.FindAll()
 
 	if len(books) <= 0 {
 		c.JSON(http.StatusOK, gin.H{
-			"books":   mapper.ToBookDTOs(books),
+			"books":   models.ToBookDTOs(books),
 			"message": "List is empty!",
 		})
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"books": mapper.ToBookDTOs(books)})
+	c.JSON(http.StatusOK, gin.H{"books": models.ToBookDTOs(books)})
 }
 
-func (p *BookApi) FindByID(c *gin.Context) {
+func (p *BookHandler) FindByID(c *gin.Context) {
 	id, err := strconv.Atoi(c.Param("id"))
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"message": "Invalid Book ID"})
@@ -48,11 +59,11 @@ func (p *BookApi) FindByID(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"book": mapper.ToBookDTO(book)})
+	c.JSON(http.StatusOK, gin.H{"book": models.ToBookDTO(book)})
 }
 
-func (p *BookApi) Create(c *gin.Context) {
-	var bookDTO dto.BookDTO
+func (p *BookHandler) Create(c *gin.Context) {
+	var bookDTO models.BookDTO
 	err := c.BindJSON(&bookDTO)
 
 	if err != nil {
@@ -60,13 +71,13 @@ func (p *BookApi) Create(c *gin.Context) {
 		return
 	}
 
-	createBook := p.BookService.Save(mapper.ToBook(bookDTO))
+	createBook := p.BookService.Save(models.ToBook(bookDTO))
 
-	c.JSON(http.StatusCreated, gin.H{"book": mapper.ToBookDTO(createBook)})
+	c.JSON(http.StatusCreated, gin.H{"book": models.ToBookDTO(createBook)})
 }
 
-func (p *BookApi) Update(c *gin.Context) {
-	var bookDTO dto.BookDTO
+func (p *BookHandler) Update(c *gin.Context) {
+	var bookDTO models.BookDTO
 	err := c.BindJSON(&bookDTO)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"message": err.Error()})
@@ -92,7 +103,7 @@ func (p *BookApi) Update(c *gin.Context) {
 	c.JSON(http.StatusNoContent, gin.H{"message": ""})
 }
 
-func (p *BookApi) Delete(c *gin.Context) {
+func (p *BookHandler) Delete(c *gin.Context) {
 	id, err := strconv.Atoi(c.Param("id"))
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"message": "Invalid Book ID"})

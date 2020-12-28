@@ -2,37 +2,41 @@ package repository
 
 import (
 	"beauty-shop/models"
-	"gorm.io/gorm"
+	"github.com/go-redis/redis/v7"
 )
 
 type BookRepository struct {
-	DB *gorm.DB
+	repo BaseRepository
 }
 
-func ProvideBookRepository(DB *gorm.DB) BookRepository {
-	return BookRepository{DB: DB}
+func ProvideBookRepository(repo BaseRepository) BookRepository {
+	return BookRepository{repo: repo}
 }
 
 func (p *BookRepository) FindAll() []models.Book {
 	var books []models.Book
-	p.DB.Find(&books)
+	p.repo.DB.Find(&books)
 
 	return books
 }
 
 func (p *BookRepository) FindByID(id uint) models.Book {
 	var book models.Book
-	p.DB.Find(&book, id)
+	p.repo.DB.Find(&book, id)
 
 	return book
 }
 
 func (p *BookRepository) Save(book models.Book) models.Book {
-	p.DB.Save(&book)
+	p.repo.DB.Save(&book)
 
 	return book
 }
 
 func (p *BookRepository) Delete(book models.Book) {
-	p.DB.Delete(&book)
+	p.repo.DB.Delete(&book)
+}
+
+func (p *BookRepository) GetRedisClient() *redis.Client {
+	return p.repo.client
 }
