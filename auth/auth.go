@@ -41,7 +41,7 @@ func TokenValid(r *http.Request) error {
 
 func CreateToken(userId uint) (*models.TokenDetails, error) {
 	td := &models.TokenDetails{}
-	td.AtExpires = time.Now().Add(time.Minute * 3).Unix()
+	td.AtExpires = time.Now().Add(time.Hour * 4).Unix()
 	td.AccessUuid = uuid.New().String()
 
 	td.RtExpires = time.Now().Add(time.Hour * 24 * 7).Unix()
